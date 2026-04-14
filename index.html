@@ -1,12 +1,205 @@
-<!-- Placeholder file for kasheef_dashboard_live.html content -->
-<!doctype html>
-<html lang="ar">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <title>Kasheef Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasheef Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
+  header { background: #1a1a2e; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2a4a; }
+  header h1 { font-size: 1.4rem; color: #a78bfa; }
+  #status { font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; background: #1e1e1e; }
+  #status.online { color: #4ade80; border: 1px solid #4ade80; }
+  #status.offline { color: #f87171; border: 1px solid #f87171; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: #1a1a2e; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #2a2a4a; }
+  .stat-card .num { font-size: 2.2rem; font-weight: bold; margin-bottom: 4px; }
+  .stat-card .lbl { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .hot .num { color: #f87171; }
+  .warm .num { color: #fbbf24; }
+  .cold .num { color: #60a5fa; }
+  .total .num { color: #a78bfa; }
+  .wa .num { color: #4ade80; }
+  .section-title { font-size: 1.1rem; color: #a78bfa; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+  th { background: #12122a; padding: 12px 16px; text-align: right; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  td { padding: 12px 16px; border-bottom: 1px solid #2a2a4a; font-size: 0.9rem; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1e1e3a; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+  .badge.hot { background: #7f1d1d; color: #fca5a5; }
+  .badge.warm { background: #78350f; color: #fde68a; }
+  .badge.cold { background: #1e3a5f; color: #93c5fd; }
+  .score-bar { display: flex; align-items: center; gap: 8px; }
+  .score-bar .bar { flex: 1; height: 6px; background: #2a2a4a; border-radius: 3px; overflow: hidden; }
+  .score-bar .fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+  .fill.hot { background: #f87171; }
+  .fill.warm { background: #fbbf24; }
+  .fill.cold { background: #60a5fa; }
+  .refresh-btn { background: #a78bfa; color: #0f0f0f; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; }
+  .refresh-btn:hover { background: #8b5cf6; }
+  .empty { text-align: center; padding: 40px; color: #555; }
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #2a2a4a; background: #1a1a2e; color: #888; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+  .filter-btn.active { background: #a78bfa; color: #0f0f0f; border-color: #a78bfa; font-weight: bold; }
+  .events { background: #1a1a2e; border-radius: 12px; padding: 16px; max-height: 200px; overflow-y: auto; }
+  .event-item { padding: 8px 0; border-bottom: 1px solid #2a2a4a; font-size: 0.85rem; display: flex; gap: 12px; }
+  .event-item:last-child { border-bottom: none; }
+  .event-time { color: #555; white-space: nowrap; font-size: 0.75rem; }
+  .event-src { color: #a78bfa; min-width: 80px; }
+</style>
 </head>
 <body>
-  <h1>Kasheef Dashboard</h1>
-  <p>Replace this placeholder with the real contents of kasheef_dashboard_live.html.</p>
+<header>
+  <h1>🏠 Kasheef Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="last-update" style="font-size:0.8rem;color:#555;"></span>
+    <span id="status" class="offline">🔴 غير متصل</span>
+    <button class="refresh-btn" onclick="loadData()">🔄 تحديث</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card total"><div class="num" id="s-total">—</div><div class="lbl">إجمالي Leads</div></div>
+    <div class="stat-card hot"><div class="num" id="s-hot">—</div><div class="lbl">🔥 HOT</div></div>
+    <div class="stat-card warm"><div class="num" id="s-warm">—</div><div class="lbl">⚡ WARM</div></div>
+    <div class="stat-card cold"><div class="num" id="s-cold">—</div><div class="lbl">❄️ COLD</div></div>
+    <div class="stat-card wa"><div class="num" id="s-wa">—</div><div class="lbl">📲 WhatsApp</div></div>
+  </div>
+
+  <!-- Leads Table -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div class="section-title">📋 آخر الـ Leads</div>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterLeads('all', this)">الكل</button>
+    <button class="filter-btn" onclick="filterLeads('hot', this)">🔥 HOT</button>
+    <button class="filter-btn" onclick="filterLeads('warm', this)">⚡ WARM</button>
+    <button class="filter-btn" onclick="filterLeads('cold', this)">❄️ COLD</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>الاسم</th>
+        <th>الموبايل</th>
+        <th>المنطقة</th>
+        <th>الهدف</th>
+        <th>الميزانية</th>
+        <th>Score</th>
+        <th>التصنيف</th>
+        <th>المصدر</th>
+        <th>الوقت</th>
+      </tr>
+    </thead>
+    <tbody id="leads-body">
+      <tr><td colspan="9" class="empty">جاري التحميل...</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Recent Events -->
+  <div class="section-title">⚡ آخر الأحداث</div>
+  <div class="events" id="events-list">
+    <div class="empty">لا توجد أحداث</div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://kasheef-server-production.up.railway.app';
+const API_KEY = 'kasheef_live_2025';
+
+let allLeads = [];
+let currentFilter = 'all';
+
+async function loadData() {
+  try {
+    const [leadsRes, statsRes] = await Promise.all([
+      fetch(`${API_URL}/api/leads?api_key=${API_KEY}`),
+      fetch(`${API_URL}/api/stats?api_key=${API_KEY}`)
+    ]);
+
+    if (!leadsRes.ok || !statsRes.ok) throw new Error('Server error');
+
+    const leadsData = await leadsRes.json();
+    const statsData = await statsRes.json();
+
+    allLeads = leadsData.leads || [];
+
+    document.getElementById('s-total').textContent = statsData.total || 0;
+    document.getElementById('s-hot').textContent = statsData.hot || 0;
+    document.getElementById('s-warm').textContent = statsData.warm || 0;
+    document.getElementById('s-cold').textContent = statsData.cold || 0;
+    document.getElementById('s-wa').textContent = statsData.waCount || 0;
+
+    renderLeads(allLeads);
+    renderEvents(statsData.recent || []);
+
+    const st = document.getElementById('status');
+    st.textContent = '🟢 متصل';
+    st.className = 'online';
+    document.getElementById('last-update').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG');
+
+  } catch (e) {
+    const st = document.getElementById('status');
+    st.textContent = '🔴 غير متصل';
+    st.className = 'offline';
+    document.getElementById('leads-body').innerHTML = '<tr><td colspan="9" class="empty">⚠️ تعذّر الاتصال بالسيرفر</td></tr>';
+  }
+}
+
+function renderLeads(leads) {
+  const filtered = currentFilter === 'all' ? leads : leads.filter(l => l.status === currentFilter);
+  const tbody = document.getElementById('leads-body');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">لا توجد leads</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(l => {
+    const time = l.createdAt ? new Date(l.createdAt).toLocaleString('ar-EG') : '—';
+    return `<tr>
+      <td>${l.name || '—'}</td>
+      <td dir="ltr">${l.phone || '—'}</td>
+      <td>${l.area || '—'}</td>
+      <td>${l.goal || '—'}</td>
+      <td>${l.budget || '—'}</td>
+      <td>
+        <div class="score-bar">
+          <span style="min-width:28px">${l.score || 0}</span>
+          <div class="bar"><div class="fill ${l.status}" style="width:${l.score || 0}%"></div></div>
+        </div>
+      </td>
+      <td><span class="badge ${l.status}">${l.status === 'hot' ? '🔥 HOT' : l.status === 'warm' ? '⚡ WARM' : '❄️ COLD'}</span></td>
+      <td>${l.source || '—'}</td>
+      <td style="font-size:0.78rem;color:#666">${time}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderEvents(events) {
+  const el = document.getElementById('events-list');
+  if (!events.length) { el.innerHTML = '<div class="empty">لا توجد أحداث</div>'; return; }
+  el.innerHTML = events.map(e => {
+    const t = e.time ? new Date(e.time).toLocaleTimeString('ar-EG') : '';
+    return `<div class="event-item">
+      <span class="event-time">${t}</span>
+      <span class="event-src">${e.src || ''}</span>
+      <span>${e.msg || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function filterLeads(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeads(allLeads);
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>
 </body>
 </html>
